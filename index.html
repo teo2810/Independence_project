@@ -567,6 +567,15 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
     document.querySelectorAll('.nb[data-s]').forEach(function(b){
       b.classList.toggle('active', b.getAttribute('data-s')===id);
     });
+    // tornando in Home resetta filtro utente e evidenziazioni
+    if(id === 'home'){
+      filter = 'all';
+      document.querySelectorAll('.cs').forEach(function(c){ c.classList.remove('on'); });
+      document.querySelectorAll('.fb[data-f]').forEach(function(b){
+        b.classList.toggle('active', b.getAttribute('data-f') === 'all');
+      });
+      draw(document.getElementById('full'), filtered());
+    }
   }
 
   document.querySelectorAll('.nb[data-s]').forEach(function(b){
