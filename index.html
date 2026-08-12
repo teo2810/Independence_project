@@ -543,7 +543,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
   var screens = ['home','lista','sospeso'];
   var currentScreen = 'home';
 
-  function go(id, dir){
+  function go(id, dir, fromHistory){
     if(id === currentScreen) return;
     var prev = currentScreen;
     var fromLeft = false;
@@ -558,7 +558,6 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
       s.style.animation = 'none';
     });
     var el = document.getElementById(id);
-    // forza reflow per far ripartire l'animazione
     void el.offsetWidth;
     el.style.animation = '';
     if(fromLeft) el.classList.add('from-left');
@@ -567,7 +566,6 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
     document.querySelectorAll('.nb[data-s]').forEach(function(b){
       b.classList.toggle('active', b.getAttribute('data-s')===id);
     });
-    // tornando in Home resetta filtro utente e evidenziazioni
     if(id === 'home'){
       filter = 'all';
       document.querySelectorAll('.cs').forEach(function(c){ c.classList.remove('on'); });
@@ -575,6 +573,9 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
         b.classList.toggle('active', b.getAttribute('data-f') === 'all');
       });
       draw(document.getElementById('full'), filtered());
+    }
+    if(!fromHistory){
+      try { history.pushState({ screen: id }, ''); } catch(e){}
     }
   }
 
@@ -976,9 +977,62 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
     chart.update();
   }
 
+  // Tasto Indietro: chiude modal → torna Home → chiede conferma uscita
+  var allowExit = false;
+  function trapBack(){
+    try { history.pushState({ screen: currentScreen }, ''); } catch(e){}
+  }
+
+  window.addEventListener('popstate', function(){
+    if(allowExit) return;
+
+    var formOv = document.getElementById('formOv');
+    var menuOv = document.getElementById('menuOv');
+    var dlgOv = document.getElementById('dlgOv');
+
+    if(dlgOv.classList.contains('open')){
+      dlgOv.classList.remove('open');
+      trapBack();
+      return;
+    }
+    if(formOv.classList.contains('open')){
+      closeForm();
+      trapBack();
+      return;
+    }
+    if(menuOv.classList.contains('open')){
+      menuOv.classList.remove('open');
+      trapBack();
+      return;
+    }
+    if(currentScreen !== 'home'){
+      go('home', 'left', true);
+      trapBack();
+      return;
+    }
+    // già in Home → conferma uscita
+    trapBack();
+    showDlg({
+      title: 'Uscire?',
+      msg: 'Vuoi chiudere l\'app?',
+      confirm: true,
+      okText: 'Esci',
+      cancelText: 'Resta',
+      onOk: function(){
+        allowExit = true;
+        try { history.go(-2); } catch(e){}
+        setTimeout(function(){ try { window.close(); } catch(err){} }, 100);
+      }
+    });
+  });
+
   document.addEventListener('DOMContentLoaded', function(){
     setupChart();
     render();
+    try {
+      history.replaceState({ screen: 'home' }, '');
+      trapBack();
+    } catch(e){}
   });
 })();
 </script>
