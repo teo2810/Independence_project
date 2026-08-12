@@ -15,11 +15,21 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{
+:root, [data-theme="dark"]{
   --bg:#0b0d12;--card:#151922;--card2:#1c2130;--txt:#f1f3f7;--muted:#8b93a7;
   --blue:#3b82f6;--blue2:#60a5fa;--pink:#ec4899;--pink2:#f9a8d4;
   --green:#22c55e;--orange:#f59e0b;--red:#ef4444;
   --bd:rgba(255,255,255,.08);--nav:76px;
+  --tip-bg:rgba(22,26,38,.88);--tip-title:#f1f3f7;--tip-body:#d0d5e0;--tip-bd:rgba(255,255,255,.14);
+  --grid:rgba(255,255,255,.05);--navbg:rgba(11,13,18,.95);
+}
+[data-theme="light"]{
+  --bg:#f4f6fa;--card:#ffffff;--card2:#eef1f6;--txt:#1a1d26;--muted:#6b7280;
+  --blue:#2563eb;--blue2:#3b82f6;--pink:#db2777;--pink2:#ec4899;
+  --green:#16a34a;--orange:#d97706;--red:#dc2626;
+  --bd:rgba(0,0,0,.08);--nav:76px;
+  --tip-bg:rgba(255,255,255,.94);--tip-title:#1a1d26;--tip-body:#4b5563;--tip-bd:rgba(0,0,0,.1);
+  --grid:rgba(0,0,0,.06);--navbg:rgba(244,246,250,.95);
 }
 html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--txt);overflow:hidden}
 .app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto}
@@ -109,7 +119,10 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
 .mt{font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mt b{font-weight:500;color:var(--txt)}
 
-.nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;height:var(--nav);background:rgba(11,13,18,.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--bd);display:flex;align-items:center;justify-content:space-around;padding-bottom:env(safe-area-inset-bottom);z-index:100;border-radius:24px 24px 0 0}
+.nav{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;height:var(--nav);background:var(--navbg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid var(--bd);display:flex;align-items:center;justify-content:space-around;padding-bottom:env(safe-area-inset-bottom);z-index:100;border-radius:24px 24px 0 0}
+.theme-row{display:flex;gap:8px;margin-bottom:14px}
+.theme-btn{flex:1;padding:12px;border-radius:12px;border:1px solid var(--bd);background:var(--bg);color:var(--muted);font-size:.85rem;font-weight:600;cursor:pointer}
+.theme-btn.active{border-color:var(--blue);background:rgba(59,130,246,.12);color:var(--blue)}
 .nb{background:none;border:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;font-size:.68rem;cursor:pointer;padding:6px 10px;flex:1}
 .nb.active{color:var(--blue)}.nb.c{position:relative;top:-18px}
 .nb svg{width:22px;height:22px;display:block}
@@ -314,6 +327,12 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
     <div class="mh"><h2>Impostazioni</h2><button class="x" id="mclose">×</button></div>
     <div class="info">Personalizza i nomi e gestisci i dati. Tutto resta <b>solo su questo dispositivo</b>.</div>
 
+    <div class="fg"><label>Tema</label>
+      <div class="theme-row">
+        <button type="button" class="theme-btn" data-theme="dark" id="themeDark">Scuro</button>
+        <button type="button" class="theme-btn" data-theme="light" id="themeLight">Chiaro</button>
+      </div>
+    </div>
     <div class="fg"><label>Nome app</label><input type="text" id="cfgTitle" placeholder="Portafogli"></div>
     <div class="fr">
       <div class="fg"><label>Portafoglio 1</label><input type="text" id="cfgA" placeholder="Nome 1"></div>
@@ -353,8 +372,9 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
   var KEY_TX = 'pf_tx_v4';
   var KEY_CFG = 'pf_cfg_v4';
 
-  var cfg = { title: 'Portafogli', nameA: 'Portafoglio 1', nameB: 'Portafoglio 2' };
+  var cfg = { title: 'Portafogli', nameA: 'Portafoglio 1', nameB: 'Portafoglio 2', theme: 'dark' };
   try { cfg = Object.assign(cfg, JSON.parse(localStorage.getItem(KEY_CFG) || '{}')); } catch(e){}
+  if(cfg.theme !== 'light' && cfg.theme !== 'dark') cfg.theme = 'dark';
 
   var tx = [];
   try { tx = JSON.parse(localStorage.getItem(KEY_TX) || '[]'); } catch(e){ tx = []; }
@@ -427,6 +447,16 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
 
   function nameOf(code){ return code === 'B' ? cfg.nameB : cfg.nameA; }
 
+  function applyTheme(){
+    var t = cfg.theme === 'light' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', t === 'light' ? '#f4f6fa' : '#0b0d12');
+    document.getElementById('themeDark').classList.toggle('active', t === 'dark');
+    document.getElementById('themeLight').classList.toggle('active', t === 'light');
+    if(chart) updateChartTheme();
+  }
+
   function applyCfg(){
     document.getElementById('appTitle').textContent = cfg.title || 'Portafogli';
     document.getElementById('legA').textContent = cfg.nameA;
@@ -441,6 +471,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
     document.getElementById('cfgA').value = cfg.nameA || '';
     document.getElementById('cfgB').value = cfg.nameB || '';
     document.title = cfg.title || 'Portafogli';
+    applyTheme();
   }
 
   function saveCfg(){
@@ -774,6 +805,12 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
   document.getElementById('mclose').addEventListener('click', function(){ document.getElementById('menuOv').classList.remove('open'); });
   document.getElementById('menuOv').addEventListener('click', function(e){ if(e.target.id==='menuOv') document.getElementById('menuOv').classList.remove('open'); });
 
+  document.getElementById('themeDark').addEventListener('click', function(){
+    cfg.theme = 'dark'; saveCfg();
+  });
+  document.getElementById('themeLight').addEventListener('click', function(){
+    cfg.theme = 'light'; saveCfg();
+  });
   document.getElementById('btnSaveCfg').addEventListener('click', function(){
     cfg.title = (document.getElementById('cfgTitle').value || 'Portafogli').trim();
     cfg.nameA = (document.getElementById('cfgA').value || 'Portafoglio 1').trim();
@@ -833,6 +870,7 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
           if(data.config.title) cfg.title = data.config.title;
           if(data.config.nameA) cfg.nameA = data.config.nameA;
           if(data.config.nameB) cfg.nameB = data.config.nameB;
+          if(data.config.theme === 'light' || data.config.theme === 'dark') cfg.theme = data.config.theme;
           saveCfg();
         }
 
@@ -897,10 +935,14 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
         datasets: [
           { label: 'A', data: [], borderColor: '#3b82f6',
             backgroundColor: function(c){ var g=c.chart.ctx.createLinearGradient(0,0,0,240); g.addColorStop(0,'rgba(59,130,246,.35)'); g.addColorStop(1,'rgba(59,130,246,.02)'); return g; },
-            fill: true, tension: .35, pointRadius: 2.5, pointHoverRadius: 5, borderWidth: 2.5 },
+            fill: true, tension: .35, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2.5,
+            pointBackgroundColor: '#3b82f6', pointBorderColor: '#3b82f6', pointBorderWidth: 0,
+            pointStyle: 'circle' },
           { label: 'B', data: [], borderColor: '#ec4899',
             backgroundColor: function(c){ var g=c.chart.ctx.createLinearGradient(0,0,0,240); g.addColorStop(0,'rgba(236,72,153,.35)'); g.addColorStop(1,'rgba(236,72,153,.02)'); return g; },
-            fill: true, tension: .35, pointRadius: 2.5, pointHoverRadius: 5, borderWidth: 2.5 }
+            fill: true, tension: .35, pointRadius: 3, pointHoverRadius: 5, borderWidth: 2.5,
+            pointBackgroundColor: '#ec4899', pointBorderColor: '#ec4899', pointBorderWidth: 0,
+            pointStyle: 'circle' }
         ]
       },
       options: {
@@ -918,15 +960,22 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
           legend: { display: false },
           tooltip: {
             enabled: true, mode: 'index', intersect: false,
-            backgroundColor: 'rgba(22, 26, 38, 0.82)',
+            backgroundColor: 'rgba(22, 26, 38, 0.88)',
             titleColor: '#f1f3f7', bodyColor: '#d0d5e0',
             borderColor: 'rgba(255,255,255,.14)', borderWidth: 1,
             padding: 14, cornerRadius: 14,
             displayColors: true, usePointStyle: true, boxPadding: 6,
+            boxWidth: 8, boxHeight: 8,
             titleFont: { size: 13, weight: '600' },
             bodyFont: { size: 12 },
             caretSize: 6,
-            callbacks: { label: function(c){ return '  '+c.dataset.label+': '+euro(c.parsed.y); } }
+            callbacks: {
+              labelColor: function(ctx){
+                var col = ctx.dataset.borderColor;
+                return { borderColor: col, backgroundColor: col, borderWidth: 0 };
+              },
+              label: function(c){ return '  '+c.dataset.label+': '+euro(c.parsed.y); }
+            }
           }
         },
         scales: {
@@ -944,6 +993,28 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
       setTimeout(function(){ chart._crosshairX=null; chart.setActiveElements([]); chart.tooltip.setActiveElements([],{x:0,y:0}); chart.update('none'); }, 80);
     }, {passive:true});
     document.getElementById('per').addEventListener('change', updateChart);
+  }
+
+  function cssVar(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function updateChartTheme(){
+    if(!chart) return;
+    var muted = cssVar('--muted') || '#8b93a7';
+    var grid = cssVar('--grid') || 'rgba(255,255,255,.05)';
+    var tipBg = cssVar('--tip-bg') || 'rgba(22,26,38,.88)';
+    var tipTitle = cssVar('--tip-title') || '#f1f3f7';
+    var tipBody = cssVar('--tip-body') || '#d0d5e0';
+    var tipBd = cssVar('--tip-bd') || 'rgba(255,255,255,.14)';
+    chart.options.scales.x.ticks.color = muted;
+    chart.options.scales.y.ticks.color = muted;
+    chart.options.scales.x.grid.color = grid;
+    chart.options.scales.y.grid.color = grid;
+    chart.options.plugins.tooltip.backgroundColor = tipBg;
+    chart.options.plugins.tooltip.titleColor = tipTitle;
+    chart.options.plugins.tooltip.bodyColor = tipBody;
+    chart.options.plugins.tooltip.borderColor = tipBd;
+    chart.update('none');
   }
 
   function updateChart(){
@@ -977,41 +1048,51 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
     chart.update();
   }
 
-  // Tasto Indietro: chiude modal → torna Home → chiede conferma uscita
+  // Tasto Indietro (Android + iOS): modal → Home → conferma uscita
   var allowExit = false;
+  var backArmed = false;
   function trapBack(){
-    try { history.pushState({ screen: currentScreen }, ''); } catch(e){}
+    try {
+      // su Android serve uno stack più “spesso”
+      history.pushState({ screen: currentScreen, t: Date.now() }, '');
+    } catch(e){}
+  }
+  function armBackStack(){
+    try {
+      history.replaceState({ screen: currentScreen, root: true }, '');
+      history.pushState({ screen: currentScreen, t: 1 }, '');
+      history.pushState({ screen: currentScreen, t: 2 }, '');
+      backArmed = true;
+    } catch(e){}
   }
 
-  window.addEventListener('popstate', function(){
+  window.addEventListener('popstate', function(ev){
     if(allowExit) return;
 
     var formOv = document.getElementById('formOv');
     var menuOv = document.getElementById('menuOv');
     var dlgOv = document.getElementById('dlgOv');
 
+    // sempre ri-arma subito (critico su Android)
+    trapBack();
+
     if(dlgOv.classList.contains('open')){
       dlgOv.classList.remove('open');
-      trapBack();
       return;
     }
     if(formOv.classList.contains('open')){
       closeForm();
-      trapBack();
       return;
     }
     if(menuOv.classList.contains('open')){
       menuOv.classList.remove('open');
-      trapBack();
       return;
     }
     if(currentScreen !== 'home'){
       go('home', 'left', true);
-      trapBack();
       return;
     }
-    // già in Home → conferma uscita
-    trapBack();
+    // Home → chiedi conferma
     showDlg({
       title: 'Uscire?',
       msg: 'Vuoi chiudere l\'app?',
@@ -1020,19 +1101,22 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
       cancelText: 'Resta',
       onOk: function(){
         allowExit = true;
-        try { history.go(-2); } catch(e){}
-        setTimeout(function(){ try { window.close(); } catch(err){} }, 100);
+        try { history.go(-3); } catch(e){}
+        setTimeout(function(){ try { window.close(); } catch(err){} }, 120);
       }
     });
   });
 
+  // Android a volte “salta” stati: ri-arma quando l’app torna visibile
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden && backArmed && !allowExit) trapBack();
+  });
+
   document.addEventListener('DOMContentLoaded', function(){
+    applyTheme();
     setupChart();
     render();
-    try {
-      history.replaceState({ screen: 'home' }, '');
-      trapBack();
-    } catch(e){}
+    armBackStack();
   });
 })();
 </script>
