@@ -344,11 +344,15 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
 
     <button class="row" id="btnExport">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      <div>Esporta backup<small>JSON con dati + impostazioni</small></div>
+      <div>Esporta backup JSON<small>Completo: dati + impostazioni</small></div>
+    </button>
+    <button class="row" id="btnExportCsv">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+      <div>Esporta CSV<small>Per Google Fogli / Excel</small></div>
     </button>
     <button class="row" id="btnImport">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      <div>Importa backup<small>Ripristina dati e nomi</small></div>
+      <div>Importa backup JSON<small>Solo file JSON di questa app</small></div>
     </button>
     <input type="file" id="fileIn" accept=".json,application/json" style="display:none">
     <button class="row" id="btnClear">
@@ -820,6 +824,14 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
     showDlg({ title: 'Salvato', msg: 'Personalizzazione aggiornata correttamente.' });
   });
 
+  function downloadBlob(blob, filename){
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   document.getElementById('btnExport').addEventListener('click', function(){
     var payload = {
       version: 4,
@@ -827,11 +839,40 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
       config: cfg,
       records: tx
     };
-    var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'portafogli-backup-'+new Date().toISOString().slice(0,10)+'.json';
-    a.click(); URL.revokeObjectURL(a.href);
+    downloadBlob(
+      new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'}),
+      'portafogli-backup-'+new Date().toISOString().slice(0,10)+'.json'
+    );
+    document.getElementById('menuOv').classList.remove('open');
+  });
+
+  document.getElementById('btnExportCsv').addEventListener('click', function(){
+    function esc(v){
+      var s = (v == null ? '' : String(v));
+      if(/[",\n\r]/.test(s)) s = '"'+s.replace(/"/g, '""')+'"';
+      return s;
+    }
+    var headers = ['Data','Proprietario','Importo','Stato','Tipo','Dettagli','Occasione','Note'];
+    var lines = [headers.join(',')];
+    var sorted = tx.slice().sort(function(a,b){ return normDate(a.data).localeCompare(normDate(b.data)); });
+    sorted.forEach(function(t){
+      lines.push([
+        esc(normDate(t.data)),
+        esc(nameOf(t.proprietario)),
+        esc(String(t.importo).replace('.', ',')),
+        esc(t.stato),
+        esc(t.tipo),
+        esc(t.dettagli),
+        esc(t.occasione),
+        esc(t.note)
+      ].join(','));
+    });
+    // BOM per Excel / Google Fogli con accenti corretti
+    var csv = '\uFEFF' + lines.join('\r\n');
+    downloadBlob(
+      new Blob([csv], {type:'text/csv;charset=utf-8'}),
+      'portafogli-'+new Date().toISOString().slice(0,10)+'.csv'
+    );
     document.getElementById('menuOv').classList.remove('open');
   });
 
