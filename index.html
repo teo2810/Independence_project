@@ -8,9 +8,6 @@
 <meta name="theme-color" content="#0b0d12">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Portafogli</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
@@ -1089,51 +1086,26 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
     chart.update();
   }
 
-  // Tasto Indietro (Android + iOS): modal → Home → conferma uscita
+  // Blocco Indietro / swipe orizzontale: modal → Home → conferma uscita
   var allowExit = false;
-  var backArmed = false;
-  function trapBack(){
+  function lockHistory(){
+    try { history.pushState({ app: 1, screen: currentScreen, t: Date.now() }, '', location.href); } catch(e){}
+  }
+  function armHistory(){
     try {
-      // su Android serve uno stack più “spesso”
-      history.pushState({ screen: currentScreen, t: Date.now() }, '');
+      history.replaceState({ app: 1, root: true }, '', location.href);
+      lockHistory();
+      lockHistory();
     } catch(e){}
   }
-  function armBackStack(){
-    try {
-      history.replaceState({ screen: currentScreen, root: true }, '');
-      history.pushState({ screen: currentScreen, t: 1 }, '');
-      history.pushState({ screen: currentScreen, t: 2 }, '');
-      backArmed = true;
-    } catch(e){}
-  }
-
-  window.addEventListener('popstate', function(ev){
-    if(allowExit) return;
-
+  function handleAppBack(){
     var formOv = document.getElementById('formOv');
     var menuOv = document.getElementById('menuOv');
     var dlgOv = document.getElementById('dlgOv');
-
-    // sempre ri-arma subito (critico su Android)
-    trapBack();
-
-    if(dlgOv.classList.contains('open')){
-      dlgOv.classList.remove('open');
-      return;
-    }
-    if(formOv.classList.contains('open')){
-      closeForm();
-      return;
-    }
-    if(menuOv.classList.contains('open')){
-      menuOv.classList.remove('open');
-      return;
-    }
-    if(currentScreen !== 'home'){
-      go('home', 'left', true);
-      return;
-    }
-    // Home → chiedi conferma
+    if(dlgOv.classList.contains('open')){ dlgOv.classList.remove('open'); return; }
+    if(formOv.classList.contains('open')){ closeForm(); return; }
+    if(menuOv.classList.contains('open')){ menuOv.classList.remove('open'); return; }
+    if(currentScreen !== 'home'){ go('home', 'left', true); return; }
     showDlg({
       title: 'Uscire?',
       msg: 'Vuoi chiudere l\'app?',
@@ -1142,22 +1114,53 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Ro
       cancelText: 'Resta',
       onOk: function(){
         allowExit = true;
-        try { history.go(-3); } catch(e){}
-        setTimeout(function(){ try { window.close(); } catch(err){} }, 120);
+        setTimeout(function(){
+          try { history.go(-1); } catch(e){}
+          try { window.close(); } catch(e){}
+        }, 50);
       }
     });
+  }
+
+  window.addEventListener('popstate', function(){
+    if(allowExit) return;
+    // ri-blocca SUBITO così swipe/back non esce dalla pagina
+    lockHistory();
+    handleAppBack();
   });
 
-  // Android a volte “salta” stati: ri-arma quando l’app torna visibile
+  // Swipe dal bordo sinistro (gesto "indietro" touch)
+  (function(){
+    var x0 = 0, y0 = 0, tracking = false;
+    document.addEventListener('touchstart', function(e){
+      if(!e.touches || !e.touches.length) return;
+      var t = e.touches[0];
+      if(t.clientX <= 24){ tracking = true; x0 = t.clientX; y0 = t.clientY; }
+      else tracking = false;
+    }, { passive: true });
+    document.addEventListener('touchmove', function(e){
+      if(!tracking || !e.touches || !e.touches.length) return;
+      var t = e.touches[0];
+      var dx = t.clientX - x0;
+      var dy = Math.abs(t.clientY - y0);
+      if(dx > 40 && dx > dy * 1.4){
+        tracking = false;
+        lockHistory();
+        handleAppBack();
+      }
+    }, { passive: true });
+    document.addEventListener('touchend', function(){ tracking = false; }, { passive: true });
+  })();
+
   document.addEventListener('visibilitychange', function(){
-    if(!document.hidden && backArmed && !allowExit) trapBack();
+    if(!document.hidden && !allowExit) lockHistory();
   });
 
   document.addEventListener('DOMContentLoaded', function(){
     applyTheme();
     setupChart();
     render();
-    armBackStack();
+    armHistory();
   });
 })();
 </script>
